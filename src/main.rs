@@ -1,6 +1,8 @@
+use configparser::ini::Ini;
 use git2::Repository;
 use std::fs;
 use std::io;
+use std::io::Write;
 use std::path::PathBuf;
 
 fn main() {
@@ -18,6 +20,8 @@ fn main() {
 		Ok(repo) => repo,
 		Err(e) => panic!("Failed to open a git repository: {}", e),
 	};
+	let mut config = Ini::new();
+	let confMap = config.load(path.join("conf")).expect("Failed to load config file");
 }
 
 fn firstLaunch(path: &PathBuf) {
@@ -37,10 +41,11 @@ Please choose your option (1-3):",
 		"1" => {
 			fs::create_dir_all(path.clone())
 				.expect("Failed to create working directory. Please check the permissions.");
-			match Repository::init(path) {
+			let repo = match Repository::init(path) {
 				Ok(repo) => repo,
 				Err(e) => panic!("Failed to init a git repository: {}", e),
 			};
+			createConfig(&path);
 		}
 		"2" => {
 			println!("Provide an address of your repository:");
@@ -63,4 +68,9 @@ Please choose your option (1-3):",
 			firstLaunch(path);
 		}
 	}
+}
+
+fn createConfig(path: &PathBuf) {
+	let mut conffile = fs::File::create(path.join("conf")).expect("Failed to create config file");
+	write!(&mut conffile, "[GIT SETTINGS]\nremote = no").expect("Failed to write to config file");
 }
