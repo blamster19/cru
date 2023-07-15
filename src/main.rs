@@ -10,17 +10,17 @@ fn main() {
 	// Create a new repository if it doesn't exist
 	if !path.is_dir() {
 		// Path doesn't exist
-		firstLaunch(path)
+		firstLaunch(&path);
 	} else {
 		// Path exists
-		let repo = match Repository::open(path) {
-			Ok(repo) => repo,
-			Err(e) => panic!("Failed to open a git repository: {}", e),
-		};
 	}
+	let repo = match Repository::open(&path) {
+		Ok(repo) => repo,
+		Err(e) => panic!("Failed to open a git repository: {}", e),
+	};
 }
 
-fn firstLaunch(path: PathBuf) {
+fn firstLaunch(path: &PathBuf) {
 	println!(
 		"Working directory doesn't exist yet. Do you wish to:
 [1] create a new repository for records under \"{}\"
