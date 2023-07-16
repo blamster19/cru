@@ -172,12 +172,8 @@ fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 		.expect("Failed to write to records file");
 	let mut record =
 		fs::File::create(path.join("records.d").join(&name)).expect("Couldn't create a record");
-	write!(
-		&mut record,
-		"{}",
-		edit::edit("").expect("Failed to open default text editor")
-	)
-	.expect("Failed to write to record");
+	edit::edit_file(path.join("records.d").join(&name))
+		.expect("Failed to open default text editor");
 	commit(&repo, &name);
 }
 
