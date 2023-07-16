@@ -3,9 +3,7 @@ use clap::{arg, Command};
 use configparser::ini::Ini;
 use edit;
 use git2::Repository;
-use std::collections::hash_map::DefaultHasher;
 use std::fs;
-use std::hash::{Hash, Hasher};
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
@@ -142,12 +140,6 @@ fn parse_cli() -> Command {
 		.subcommand(Command::new("ls").about("List all notes"))
 }
 
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
-	let mut s = DefaultHasher::new();
-	t.hash(&mut s);
-	s.finish()
-}
-
 fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 	// Prepare metadata to write
 	let now = Utc::now().to_rfc3339();
@@ -157,30 +149,30 @@ fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 		None => now,
 	}
 	.to_string();
-	// Create a hash of record
-	let identifier = format!("cru note {} {}", name, now);
-	let identifier = calculate_hash(&identifier).to_string();
 	// Register in records file
 	let mut record_list = Ini::new();
 	record_list
 		.load(path.join("records"))
 		.expect("Failed to open records file");
-	record_list.set(&identifier, "name", Some(name.to_string()));
-	record_list.set(&identifier, "modified", Some(now.to_string()));
+	// Check if name isn't taken
+	if record_list.sections().contains(&name) {
+		println!("Note with such name already exists!");
+		std::process::exit(0);
+	}
+	// Add record
+	record_list.set(&name, "modified", Some(now.to_string()));
 	record_list
 		.write(path.join("records"))
 		.expect("Failed to write to records file");
-
-	let mut record = fs::File::create(path.join("records.d").join(&identifier))
-		.expect("Couldn't create a record");
-	//std::process::Command::new(editor).arg(&path.join(&name)).status().expect("Failed to open default text editor");
+	let mut record =
+		fs::File::create(path.join("records.d").join(&name)).expect("Couldn't create a record");
 	write!(
 		&mut record,
 		"{}",
 		edit::edit("").expect("Failed to open default text editor")
 	)
 	.expect("Failed to write to record");
-	commit(&repo, &identifier);
+	commit(&repo, &name);
 }
 
 fn ls_notes(repo: &Repository, path: &PathBuf) {
@@ -195,9 +187,7 @@ fn ls_notes(repo: &Repository, path: &PathBuf) {
 			record_list
 				.get(record, "modified")
 				.expect("Corrupted records file"),
-			record_list
-				.get(record, "name")
-				.expect("Corrupted records file")
+			record,
 		);
 	}
 }
