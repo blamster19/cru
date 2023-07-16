@@ -1,3 +1,4 @@
+use ansi_term::Colour;
 use chrono::Utc;
 use clap::{arg, Command};
 use configparser::ini::Ini;
@@ -191,10 +192,12 @@ fn ls_notes(repo: &Repository, path: &PathBuf) {
 	for record in sections.iter() {
 		println!(
 			"{}   {}",
-			record_list
-				.get(record, "modified")
-				.expect("Corrupted records file"),
-			record,
+			Colour::Blue.bold().paint(
+				record_list
+					.get(record, "modified")
+					.expect("Corrupted records file")
+			),
+			Colour::Red.bold().paint(record),
 		);
 	}
 }
@@ -245,10 +248,12 @@ fn show_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 	record_buf.read_to_string(&mut record_str);
 	print!(
 		"{}\n{}\n\n{}",
-		&name,
-		record_list
-			.get(&name, "modified")
-			.expect("Corrupted records file"),
+		Colour::Red.bold().paint(&name),
+		Colour::Blue.bold().paint(
+			record_list
+				.get(&name, "modified")
+				.expect("Corrupted records file")
+		),
 		record_str,
 	);
 }
