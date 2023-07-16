@@ -12,7 +12,7 @@ fn main() {
 	// Create a new repository if it doesn't exist
 	if !path.is_dir() {
 		// Path doesn't exist
-		firstLaunch(&path);
+		first_launch(&path);
 	} else {
 		// Path exists
 	}
@@ -21,10 +21,12 @@ fn main() {
 		Err(e) => panic!("Failed to open a git repository: {}", e),
 	};
 	let mut config = Ini::new();
-	let confMap = config.load(path.join("conf")).expect("Failed to load config file");
+	let conf_map = config
+		.load(path.join("conf"))
+		.expect("Failed to load config file");
 }
 
-fn firstLaunch(path: &PathBuf) {
+fn first_launch(path: &PathBuf) {
 	println!(
 		"Working directory doesn't exist yet. Do you wish to:
 [1] create a new repository for records under \"{}\"
@@ -45,7 +47,7 @@ Please choose your option (1-3):",
 				Ok(repo) => repo,
 				Err(e) => panic!("Failed to init a git repository: {}", e),
 			};
-			createConfig(&path);
+			create_config(&path);
 			commit(&repo, "Initial commit");
 		}
 		"2" => {
@@ -66,28 +68,40 @@ Please choose your option (1-3):",
 		}
 		_ => {
 			println!("Invalid option.");
-			firstLaunch(path);
+			first_launch(path);
 		}
 	}
 }
 
-fn createConfig(path: &PathBuf) {
+fn create_config(path: &PathBuf) {
 	let mut conffile = fs::File::create(path.join("conf")).expect("Failed to create config file");
 	write!(&mut conffile, "[GIT SETTINGS]\nremote = no").expect("Failed to write to config file");
 }
 
-fn commit(repo: &Repository,  message: &str) {
+fn commit(repo: &Repository, message: &str) {
 	let mut index = repo.index().expect("Failed to get Index file");
 	index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None);
 	index.write();
-	let signature = git2::Signature::now("cru", "cru@xyz.net").expect("Failed to create a signature");
+	let signature =
+		git2::Signature::now("cru", "cru@xyz.net").expect("Failed to create a signature");
 	let oid = index.write_tree().expect("Couldn't write tree");
 	let tree = repo.find_tree(oid).expect("Couldn't find tree");
-	match repo.head(){
+	match repo.head() {
 		Ok(head) => {
-			let parent  = head.resolve().unwrap().peel_to_commit().expect("Couldn't find last commit");
-			repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[&parent]);
-		},
+			let parent = head
+				.resolve()
+				.unwrap()
+				.peel_to_commit()
+				.expect("Couldn't find last commit");
+			repo.commit(
+				Some("HEAD"),
+				&signature,
+				&signature,
+				message,
+				&tree,
+				&[&parent],
+			);
+		}
 		Err(e) => {
 			repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[]);
 		}
