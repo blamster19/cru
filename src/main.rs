@@ -131,17 +131,13 @@ fn create_config(path: &PathBuf) {
 }
 
 fn parse_cli() -> Command {
-	let now = Utc::now().to_rfc3339();
-	let _now = now.as_str();
 	Command::new("cru")
 		.about("crude record utility")
 		.arg_required_else_help(true)
 		.subcommand(
-			Command::new("new").about("Create new note").arg(
-				arg!(<NAME> "Name of the note")
-					.required(false)
-					.default_value("a"),
-			),
+			Command::new("new")
+				.about("Create new note")
+				.arg(arg!(<NAME> "Name of the note").required(false)),
 		)
 		.subcommand(Command::new("ls").about("List all notes"))
 }
@@ -156,10 +152,11 @@ fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 	// Prepare metadata to write
 	let now = Utc::now().to_rfc3339();
 	let now = now.as_str();
-	let name: String = argument
-		.get_one::<String>("NAME")
-		.expect("Failed to read record name")
-		.to_string();
+	let name: String = match argument.get_one::<String>("NAME") {
+		Some(name) => name,
+		None => now,
+	}
+	.to_string();
 	// Create a hash of record
 	let identifier = format!("cru note {} {}", name, now);
 	let identifier = calculate_hash(&identifier).to_string();
