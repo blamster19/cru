@@ -1,10 +1,14 @@
+use chrono::{DateTime, Utc};
+use clap::{arg, command, value_parser, ArgAction, Command};
 use configparser::ini::Ini;
+use edit;
 use git2::Repository;
+use std::collections::hash_map::DefaultHasher;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
-use clap::{arg, command, value_parser, ArgAction, Command};
 
 fn main() {
 	let path: PathBuf = dirs::home_dir()
@@ -28,10 +32,8 @@ fn main() {
 	// Parse arguments
 	let matches = parse_cli().get_matches();
 	match matches.subcommand() {
-		Some(("new", sub_matches)) => {
-			println!("Adding new note");
-		}
-		_ => unreachable!()
+		Some(("new", sub_matches)) => new_note(sub_matches, &repo, &path),
+		_ => unreachable!(),
 	}
 }
 
@@ -113,6 +115,7 @@ fn create_new_repo(path: &PathBuf) {
 		Err(e) => panic!("Failed to init a git repository: {}", e),
 	};
 	create_config(&path);
+	std::fs::create_dir_all(path.join("records.d"));
 	commit(&repo, "Initial commit");
 }
 
@@ -123,11 +126,53 @@ fn create_config(path: &PathBuf) {
 }
 
 fn parse_cli() -> Command {
+	let now = Utc::now().to_rfc3339();
+	let now = now.as_str();
 	Command::new("cru")
 		.about("crude record utility")
 		.arg_required_else_help(true)
 		.subcommand(
-			Command::new("new")
-				.about("Create new note")
+			Command::new("new").about("Create new note").arg(
+				arg!(<NAME> "Name of the note")
+					.required(false)
+					.default_value("a"),
+			),
 		)
+}
+
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+	let mut s = DefaultHasher::new();
+	t.hash(&mut s);
+	s.finish()
+}
+
+fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
+	// Prepare metadata to write
+	let now = Utc::now().to_rfc3339();
+	let now = now.as_str();
+	let name: String = argument
+		.get_one::<String>("NAME")
+		.expect("Failed to read record name")
+		.to_string();
+	// Create a hash of record
+	let identifier = format!("cru note {} {}", name, now);
+	let identifier = calculate_hash(&identifier).to_string();
+	// Register in records file
+	let mut record_list = Ini::new();
+	record_list
+		.load(path.join("records"))
+		.expect("Failed to open records file");
+	record_list.set(&identifier, "name", Some(name.to_string()));
+	record_list.set(&identifier, "modified", Some(now.to_string()));
+	record_list.write(path.join("records"));
+
+	let mut record = fs::File::create(path.join("records.d").join(&identifier))
+		.expect("Couldn't create a record");
+	//std::process::Command::new(editor).arg(&path.join(&name)).status().expect("Failed to open default text editor");
+	write!(
+		&mut record,
+		"{}",
+		edit::edit("").expect("Failed to open default text editor")
+	);
+	commit(&repo, &identifier);
 }
