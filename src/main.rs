@@ -46,6 +46,7 @@ Please choose your option (1-3):",
 				Err(e) => panic!("Failed to init a git repository: {}", e),
 			};
 			createConfig(&path);
+			commit(&repo, "Initial commit");
 		}
 		"2" => {
 			println!("Provide an address of your repository:");
@@ -73,4 +74,22 @@ Please choose your option (1-3):",
 fn createConfig(path: &PathBuf) {
 	let mut conffile = fs::File::create(path.join("conf")).expect("Failed to create config file");
 	write!(&mut conffile, "[GIT SETTINGS]\nremote = no").expect("Failed to write to config file");
+}
+
+fn commit(repo: &Repository,  message: &str) {
+	let mut index = repo.index().expect("Failed to get Index file");
+	index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None);
+	index.write();
+	let signature = git2::Signature::now("cru", "cru@xyz.net").expect("Failed to create a signature");
+	let oid = index.write_tree().expect("Couldn't write tree");
+	let tree = repo.find_tree(oid).expect("Couldn't find tree");
+	match repo.head(){
+		Ok(head) => {
+			let parent  = head.resolve().unwrap().peel_to_commit().expect("Couldn't find last commit");
+			repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[&parent]);
+		},
+		Err(e) => {
+			repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[]);
+		}
+	};
 }
