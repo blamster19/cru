@@ -194,7 +194,10 @@ fn ls_notes(repo: &Repository, path: &PathBuf) {
 	let sections = record_list.sections();
 	for record in sections.iter() {
 		println!(
-			"{}",
+			"{}   {}",
+			record_list
+				.get(record, "modified")
+				.expect("Corrupted records file"),
 			record_list
 				.get(record, "name")
 				.expect("Corrupted records file")
