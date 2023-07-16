@@ -50,14 +50,7 @@ Please choose your option (1-3):",
 		.expect("Failed to read line");
 	match ans.trim() {
 		"1" => {
-			fs::create_dir_all(path.clone())
-				.expect("Failed to create working directory. Please check the permissions.");
-			let repo = match Repository::init(path) {
-				Ok(repo) => repo,
-				Err(e) => panic!("Failed to init a git repository: {}", e),
-			};
-			create_config(&path);
-			commit(&repo, "Initial commit");
+			create_new_repo(&path);
 		}
 		"2" => {
 			println!("Provide an address of your repository:");
@@ -80,11 +73,6 @@ Please choose your option (1-3):",
 			first_launch(path);
 		}
 	}
-}
-
-fn create_config(path: &PathBuf) {
-	let mut conffile = fs::File::create(path.join("conf")).expect("Failed to create config file");
-	write!(&mut conffile, "[GIT SETTINGS]\nremote = no").expect("Failed to write to config file");
 }
 
 fn commit(repo: &Repository, message: &str) {
@@ -115,6 +103,23 @@ fn commit(repo: &Repository, message: &str) {
 			repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[]);
 		}
 	};
+}
+
+fn create_new_repo(path: &PathBuf) {
+	fs::create_dir_all(path.clone())
+		.expect("Failed to create working directory. Please check the permissions.");
+	let repo = match Repository::init(path) {
+		Ok(repo) => repo,
+		Err(e) => panic!("Failed to init a git repository: {}", e),
+	};
+	create_config(&path);
+	commit(&repo, "Initial commit");
+}
+
+fn create_config(path: &PathBuf) {
+	let mut conffile = fs::File::create(path.join("conf")).expect("Failed to create config file");
+	write!(&mut conffile, "[GIT SETTINGS]\nremote = no").expect("Failed to write to config file");
+	let dbfile = fs::File::create(path.join("records")).expect("Failed to create records file");
 }
 
 fn parse_cli() -> Command {
