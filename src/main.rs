@@ -133,22 +133,25 @@ fn create_config(path: &PathBuf) {
 }
 
 fn parse_cli() -> Command {
-	Command::new("cru")
-		.about("crude record utility")
+	clap::command!()
+		.about("cru - crude record utility")
 		.arg_required_else_help(true)
 		.subcommand(
 			Command::new("new")
+				.alias("n")
 				.about("Create new note")
 				.arg(arg!(<NAME> "Name of the note").required(false)),
 		)
-		.subcommand(Command::new("ls").about("List all notes"))
+		.subcommand(Command::new("ls").alias("l").about("List all notes"))
 		.subcommand(
 			Command::new("edit")
+				.alias("e")
 				.about("Edit existing note")
 				.arg(arg!(<NAME> "Name of the note").required(true)),
 		)
 		.subcommand(
 			Command::new("show")
+				.alias("s")
 				.about("Show existing note")
 				.arg(arg!(<NAME> "Name of the note").required(true)),
 		)
