@@ -170,8 +170,6 @@ fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 	record_list
 		.write(path.join("records"))
 		.expect("Failed to write to records file");
-	let mut record =
-		fs::File::create(path.join("records.d").join(&name)).expect("Couldn't create a record");
 	edit::edit_file(path.join("records.d").join(&name))
 		.expect("Failed to open default text editor");
 	commit(&repo, &name);
@@ -210,11 +208,11 @@ fn edit_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 	}
 	let now = Utc::now().to_rfc3339();
 	let now = now.as_str();
-	let mut record =
-		fs::File::open(path.join("records.d").join(&name)).expect("Couldn't open a record");
 	edit::edit_file(path.join("records.d").join(&name))
 		.expect("Failed to open default text editor");
 	record_list.set(&name, "modified", Some(now.to_string()));
-	record_list.write(path.join(&name));
+	record_list
+		.write(path.join(&name))
+		.expect("Failed to write to records file");
 	commit(&repo, &name);
 }
