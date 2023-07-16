@@ -33,6 +33,7 @@ fn main() {
 	let matches = parse_cli().get_matches();
 	match matches.subcommand() {
 		Some(("new", sub_matches)) => new_note(sub_matches, &repo, &path),
+		Some(("ls", sub_matches)) => ls_notes(&repo, &path),
 		_ => unreachable!(),
 	}
 }
@@ -142,6 +143,7 @@ fn parse_cli() -> Command {
 					.default_value("a"),
 			),
 		)
+		.subcommand(Command::new("ls").about("List all notes"))
 }
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
@@ -182,4 +184,20 @@ fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 	)
 	.expect("Failed to write to record");
 	commit(&repo, &identifier);
+}
+
+fn ls_notes(repo: &Repository, path: &PathBuf) {
+	let mut record_list = Ini::new();
+	record_list
+		.load(path.join("records"))
+		.expect("Failed to open records file");
+	let sections = record_list.sections();
+	for record in sections.iter() {
+		println!(
+			"{}",
+			record_list
+				.get(record, "name")
+				.expect("Corrupted records file")
+		);
+	}
 }
