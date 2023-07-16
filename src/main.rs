@@ -4,6 +4,7 @@ use std::fs;
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
+use clap::{arg, command, value_parser, ArgAction, Command};
 
 fn main() {
 	let path: PathBuf = dirs::home_dir()
@@ -24,6 +25,14 @@ fn main() {
 	let conf_map = config
 		.load(path.join("conf"))
 		.expect("Failed to load config file");
+	// Parse arguments
+	let matches = parse_cli().get_matches();
+	match matches.subcommand() {
+		Some(("new", sub_matches)) => {
+			println!("Adding new note");
+		}
+		_ => unreachable!()
+	}
 }
 
 fn first_launch(path: &PathBuf) {
@@ -106,4 +115,14 @@ fn commit(repo: &Repository, message: &str) {
 			repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[]);
 		}
 	};
+}
+
+fn parse_cli() -> Command {
+	Command::new("cru")
+		.about("crude record utility")
+		.arg_required_else_help(true)
+		.subcommand(
+			Command::new("new")
+				.about("Create new note")
+		)
 }
