@@ -1,5 +1,5 @@
-use chrono::{DateTime, Utc};
-use clap::{arg, command, value_parser, ArgAction, Command};
+use chrono::Utc;
+use clap::{arg, Command};
 use configparser::ini::Ini;
 use edit;
 use git2::Repository;
@@ -26,7 +26,7 @@ fn main() {
 		Err(e) => panic!("Failed to open a git repository: {}", e),
 	};
 	let mut config = Ini::new();
-	let conf_map = config
+	let _conf_map = config
 		.load(path.join("conf"))
 		.expect("Failed to load config file");
 	// Parse arguments
@@ -79,8 +79,10 @@ Please choose your option (1-3):",
 
 fn commit(repo: &Repository, message: &str) {
 	let mut index = repo.index().expect("Failed to get Index file");
-	index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None);
-	index.write();
+	index
+		.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)
+		.expect("Failed to commit");
+	index.write().expect("Failed to commit");
 	let signature =
 		git2::Signature::now("cru", "cru@xyz.net").expect("Failed to create a signature");
 	let oid = index.write_tree().expect("Couldn't write tree");
@@ -99,10 +101,12 @@ fn commit(repo: &Repository, message: &str) {
 				message,
 				&tree,
 				&[&parent],
-			);
+			)
+			.expect("Failed to commit");
 		}
-		Err(e) => {
-			repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[]);
+		Err(_e) => {
+			repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[])
+				.expect("Failed to commit");
 		}
 	};
 }
@@ -115,19 +119,19 @@ fn create_new_repo(path: &PathBuf) {
 		Err(e) => panic!("Failed to init a git repository: {}", e),
 	};
 	create_config(&path);
-	std::fs::create_dir_all(path.join("records.d"));
+	std::fs::create_dir_all(path.join("records.d")).expect("Failed to create directory");
 	commit(&repo, "Initial commit");
 }
 
 fn create_config(path: &PathBuf) {
 	let mut conffile = fs::File::create(path.join("conf")).expect("Failed to create config file");
 	write!(&mut conffile, "[GIT SETTINGS]\nremote = no").expect("Failed to write to config file");
-	let dbfile = fs::File::create(path.join("records")).expect("Failed to create records file");
+	fs::File::create(path.join("records")).expect("Failed to create records file");
 }
 
 fn parse_cli() -> Command {
 	let now = Utc::now().to_rfc3339();
-	let now = now.as_str();
+	let _now = now.as_str();
 	Command::new("cru")
 		.about("crude record utility")
 		.arg_required_else_help(true)
@@ -164,7 +168,9 @@ fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 		.expect("Failed to open records file");
 	record_list.set(&identifier, "name", Some(name.to_string()));
 	record_list.set(&identifier, "modified", Some(now.to_string()));
-	record_list.write(path.join("records"));
+	record_list
+		.write(path.join("records"))
+		.expect("Failed to write to records file");
 
 	let mut record = fs::File::create(path.join("records.d").join(&identifier))
 		.expect("Couldn't create a record");
@@ -173,6 +179,7 @@ fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 		&mut record,
 		"{}",
 		edit::edit("").expect("Failed to open default text editor")
-	);
+	)
+	.expect("Failed to write to record");
 	commit(&repo, &identifier);
 }
