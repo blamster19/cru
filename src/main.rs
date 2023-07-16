@@ -5,6 +5,7 @@ use edit;
 use git2::Repository;
 use std::fs;
 use std::io;
+use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -33,6 +34,7 @@ fn main() {
 		Some(("new", sub_matches)) => new_note(sub_matches, &repo, &path),
 		Some(("ls", sub_matches)) => ls_notes(&repo, &path),
 		Some(("edit", sub_matches)) => edit_note(sub_matches, &repo, &path),
+		Some(("show", sub_matches)) => show_note(sub_matches, &repo, &path),
 		_ => unreachable!(),
 	}
 }
@@ -144,6 +146,11 @@ fn parse_cli() -> Command {
 				.about("Edit existing note")
 				.arg(arg!(<NAME> "Name of the note").required(true)),
 		)
+		.subcommand(
+			Command::new("show")
+				.about("Show existing note")
+				.arg(arg!(<NAME> "Name of the note").required(true)),
+		)
 }
 
 fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
@@ -215,4 +222,33 @@ fn edit_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
 		.write(path.join(&name))
 		.expect("Failed to write to records file");
 	commit(&repo, &name);
+}
+
+fn show_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
+	let name: String = argument
+		.get_one::<String>("NAME")
+		.expect("Failed to read name")
+		.to_string();
+	let mut record_list = Ini::new();
+	record_list
+		.load(path.join("records"))
+		.expect("Failed to open records file");
+	// Check if record exists
+	if !record_list.sections().contains(&name) {
+		println!("Note with such name doesn't exist!");
+		std::process::exit(0);
+	}
+	// Read data and metadata
+	let record = fs::File::open(path.join("records.d").join(&name)).expect("Failed to open record");
+	let mut record_buf = io::BufReader::new(record);
+	let mut record_str = String::new();
+	record_buf.read_to_string(&mut record_str);
+	print!(
+		"{}\n{}\n\n{}",
+		&name,
+		record_list
+			.get(&name, "modified")
+			.expect("Corrupted records file"),
+		record_str,
+	);
 }
