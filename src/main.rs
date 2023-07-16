@@ -32,6 +32,7 @@ fn main() {
 	match matches.subcommand() {
 		Some(("new", sub_matches)) => new_note(sub_matches, &repo, &path),
 		Some(("ls", sub_matches)) => ls_notes(&repo, &path),
+		Some(("edit", sub_matches)) => edit_note(sub_matches, &repo, &path),
 		_ => unreachable!(),
 	}
 }
@@ -138,6 +139,11 @@ fn parse_cli() -> Command {
 				.arg(arg!(<NAME> "Name of the note").required(false)),
 		)
 		.subcommand(Command::new("ls").about("List all notes"))
+		.subcommand(
+			Command::new("edit")
+				.about("Edit existing note")
+				.arg(arg!(<NAME> "Name of the note").required(true)),
+		)
 }
 
 fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
@@ -190,4 +196,29 @@ fn ls_notes(repo: &Repository, path: &PathBuf) {
 			record,
 		);
 	}
+}
+
+fn edit_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
+	let name: String = argument
+		.get_one::<String>("NAME")
+		.expect("Failed to read name")
+		.to_string();
+	let mut record_list = Ini::new();
+	record_list
+		.load(path.join("records"))
+		.expect("Failed to open records file");
+	// Check if record exists
+	if !record_list.sections().contains(&name) {
+		println!("Note with such name doesn't exist!");
+		std::process::exit(0);
+	}
+	let now = Utc::now().to_rfc3339();
+	let now = now.as_str();
+	let mut record =
+		fs::File::open(path.join("records.d").join(&name)).expect("Couldn't open a record");
+	edit::edit_file(path.join("records.d").join(&name))
+		.expect("Failed to open default text editor");
+	record_list.set(&name, "modified", Some(now.to_string()));
+	record_list.write(path.join(&name));
+	commit(&repo, &name);
 }
