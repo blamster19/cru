@@ -1,3 +1,4 @@
+use configparser::ini::Ini;
 use git2::Repository;
 use std::fs;
 use std::io::Write;
@@ -49,8 +50,23 @@ pub(in crate::interface) fn create_new_repo(path: &PathBuf) {
 	commit(&repo, "Initial commit");
 }
 
+pub(in crate::interface) fn add_remote(repo: &Repository, config_path: &PathBuf, url: &str) {
+	// add remote to config
+	let mut config = Ini::new();
+	config
+		.load(config_path.join("conf"))
+		.expect("Failed to open config file");
+	config.set("GIT SETTINGS", "remote", Some(url.to_string()));
+	config
+		.write(config_path.join("conf"))
+		.expect("Failed to write to config file");
+	// add remote to git
+	repo.remote("origin", &url)
+		.expect("Failed to add remote repository");
+	commit(&repo, "add remote repository");
+}
+
 fn create_config(path: &PathBuf) {
 	let mut conffile = fs::File::create(path.join("conf")).expect("Failed to create config file");
-	write!(&mut conffile, "[GIT SETTINGS]\nremote = no").expect("Failed to write to config file");
 	fs::File::create(path.join("records")).expect("Failed to create records file");
 }
