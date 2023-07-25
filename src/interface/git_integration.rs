@@ -66,6 +66,33 @@ pub(in crate::interface) fn add_remote(repo: &Repository, config_path: &PathBuf,
 	commit(&repo, "add remote repository");
 }
 
+pub(in crate::interface) fn push(repo: &Repository) {
+	let mut remote_repo = match repo.find_remote("origin") {
+		Ok(remote) => remote,
+		Err(_) => panic!("Cannot push without configured remote"),
+	};
+	remote_repo
+		.connect(git2::Direction::Push)
+		.expect("Failed to connect to remote repo");
+	fetch(&repo);
+	remote_repo
+		.push(&[""], None)
+		.expect("Failed to push to remote");
+}
+
+pub(in crate::interface) fn fetch(repo: &Repository) {
+	let mut remote_repo = match repo.find_remote("origin") {
+		Ok(remote) => remote,
+		Err(_) => panic!("Cannot push without configured remote"),
+	};
+	remote_repo
+		.connect(git2::Direction::Push)
+		.expect("Failed to connect to remote repo");
+	remote_repo
+		.fetch(&[""], None, None)
+		.expect("Failed to fetch from remote");
+}
+
 fn create_config(path: &PathBuf) {
 	let mut conffile = fs::File::create(path.join("conf")).expect("Failed to create config file");
 	fs::File::create(path.join("records")).expect("Failed to create records file");
