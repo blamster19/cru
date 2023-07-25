@@ -73,6 +73,12 @@ pub fn parse_cli() -> Command {
 				.about("Show existing note")
 				.arg(arg!(<NAME> "Name of the note").required(true)),
 		)
+		.subcommand(
+			Command::new("remote")
+				.alias("m")
+				.about("Add remote repository")
+				.arg(arg!(<URL> "URL of repository").required(true)),
+		)
 }
 
 pub fn new_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
@@ -177,4 +183,12 @@ pub fn show_note(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf)
 		),
 		record_str,
 	);
+}
+
+pub fn add_remote(argument: &clap::ArgMatches, repo: &Repository, path: &PathBuf) {
+	let remote_url: String = argument
+		.get_one::<String>("URL")
+		.expect("Failed to read URL")
+		.to_string();
+	git_integration::add_remote(&repo, &path, &remote_url);
 }

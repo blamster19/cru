@@ -29,6 +29,7 @@ fn main() {
 		Some(("ls", sub_matches)) => interface::ls_notes(&repo, &path),
 		Some(("edit", sub_matches)) => interface::edit_note(sub_matches, &repo, &path),
 		Some(("show", sub_matches)) => interface::show_note(sub_matches, &repo, &path),
+		Some(("remote", sub_matches)) => interface::add_remote(sub_matches, &repo, &path),
 		_ => unreachable!(),
 	}
 }
